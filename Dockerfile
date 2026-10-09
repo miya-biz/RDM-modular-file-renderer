@@ -1,58 +1,78 @@
-FROM python:3.13-slim
+# Build stage: compilers and development headers are only needed to install
+# the Python dependencies, so they stay out of the runtime image.
+FROM python:3.13-slim AS build
 
+ENV POETRY_HOME=/opt/poetry \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=0 \
+    POETRY_VIRTUALENVS_IN_PROJECT=1
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
-RUN usermod -d /home www-data \
-    && chown www-data:www-data /home \
-    && apt-get update
-
-    # mfr dependencies
-RUN apt-get install -y \
+RUN apt-get update \
+    && apt-get install -y \
+        # waterbutler is installed from a git repository
         git \
-        make \
-        gcc \
         build-essential \
-        gfortran \
-        r-base \
-        libblas-dev \
-        libevent-dev \
-        libfreetype6-dev \
-        libjpeg-dev \
-        libpng-dev \
-        libtiff5-dev \
-        libxml2-dev \
-        libxslt1-dev \
-        zlib1g-dev \
-        gnupg2 \
-        # convert .step to jsc3d-compatible format
-        freecad \
-        # pspp dependencies
-        pspp \
-        # grab gosu for easy step-down from root
-        gosu
-RUN apt-get clean
-RUN apt-get autoremove -y
-RUN rm -rf /var/lib/apt/lists/*
+        libffi-dev \
+        libssl-dev \
+    && apt-get clean \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Keep poetry in its own virtualenv so it is not installed into site-packages
+RUN python -m venv ${POETRY_HOME} \
+    && ${POETRY_HOME}/bin/pip install --no-cache-dir poetry==2.1.2
 
 RUN mkdir -p /code
 WORKDIR /code
 
-COPY pyproject.toml poetry.lock* /code/
-
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_CREATE=0 \
-    POETRY_VIRTUALENVS_IN_PROJECT=1
-
-RUN pip install poetry==2.1.2 setuptools==80.1.0 \
-    && poetry install --no-root --without=docs
+COPY pyproject.toml poetry.lock /code/
+RUN poetry install --no-root --without=docs
 
 # Copy the rest of the code over
 COPY ./ /code/
 
+# Install the project and verify the resolved dependency tree is self-consistent
+RUN poetry install --without=docs \
+    && python -m pip check
+
+
+# Runtime stage
+FROM python:3.13-slim
+
+RUN usermod -d /home www-data && chown www-data:www-data /home
+
+RUN apt-get update \
+    # pick up Debian security updates published after the base image was built
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+        # convert .step to jsc3d-compatible format
+        freecad \
+        # convert SPSS .sav to .csv (pspp-convert)
+        pspp \
+        # grab gosu for easy step-down from root
+        gosu \
+    && apt-get clean \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=build /usr/local/bin /usr/local/bin
+# nbconvert templates used by the ipynb renderer live outside site-packages
+COPY --from=build /usr/local/share/jupyter /usr/local/share/jupyter
+COPY --from=build /code /code
+
+# pip is not needed at runtime and ships its own copies of urllib3, msgpack and
+# setuptools, so remove it together with the wheel bundled for ensurepip
+RUN python3 -m pip uninstall -y pip \
+    && rm -rf /usr/local/lib/python3.13/ensurepip/_bundled \
+    && rm -f /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13
+
+WORKDIR /code
+
 ARG GIT_COMMIT=
 ENV GIT_COMMIT=${GIT_COMMIT}
 
-RUN poetry install --without=docs
-
 EXPOSE 7778
 
-CMD ["gosu", "www-data", "invoke", "server"]
+CMD ["gosu", "www-data", "python3", "-m", "invoke", "server"]
