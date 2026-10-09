@@ -14,6 +14,8 @@ jobs:
       contents: read
     outputs:
       image: ${{ steps.meta.outputs.image }}
+      build_image: ${{ steps.meta.outputs.build_image }}
+      unoserver_image: ${{ steps.meta.outputs.unoserver_image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,9 +25,25 @@ jobs:
         run: |
           docker build -t rdm-mfr-test:${{ github.sha }} -f ./Dockerfile .
 
+      - name: Build Docker image (build stage, used for unit tests)
+        run: |
+          docker build --target build -t rdm-mfr-build:${{ github.sha }} -f ./Dockerfile .
+
+      - name: Build Docker image (unoserver)
+        run: |
+          docker build -t rdm-unoserver-test:${{ github.sha }} -f ./Dockerfile.unoserver .
+
       - name: Save Docker image
         run: |
           docker save rdm-mfr-test:${{ github.sha }} -o /tmp/rdm-mfr-image.tar
+
+      - name: Save Docker image (build stage)
+        run: |
+          docker save rdm-mfr-build:${{ github.sha }} -o /tmp/rdm-mfr-build-image.tar
+
+      - name: Save Docker image (unoserver)
+        run: |
+          docker save rdm-unoserver-test:${{ github.sha }} -o /tmp/rdm-unoserver-image.tar
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v4
@@ -34,9 +52,26 @@ jobs:
           path: /tmp/rdm-mfr-image.tar
           retention-days: 1
 
+      - name: Upload Docker image artifact (build stage)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rdm-mfr-build-image
+          path: /tmp/rdm-mfr-build-image.tar
+          retention-days: 1
+
+      - name: Upload Docker image artifact (unoserver)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rdm-unoserver-image
+          path: /tmp/rdm-unoserver-image.tar
+          retention-days: 1
+
       - name: Export image reference
         id: meta
-        run: echo "image=rdm-mfr-test:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "image=rdm-mfr-test:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "build_image=rdm-mfr-build:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "unoserver_image=rdm-unoserver-test:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
   scan-image:
     runs-on: ubuntu-latest
@@ -45,6 +80,16 @@ jobs:
       actions: read
       contents: read
       security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - name: mfr
+            artifact: rdm-mfr-image
+            image: ${{ needs.build-image.outputs.image }}
+          - name: unoserver
+            artifact: rdm-unoserver-image
+            image: ${{ needs.build-image.outputs.unoserver_image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,14 +97,14 @@ jobs:
       - name: Download Docker image artifact
         uses: actions/download-artifact@v4
         with:
-          name: rdm-mfr-image
+          name: ${{ matrix.target.artifact }}
           path: /tmp
 
       - name: Scan Docker image with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
-          input: /tmp/rdm-mfr-image.tar
+          input: /tmp/${{ matrix.target.artifact }}.tar
           scanners: vuln
           vuln-type: os,library
           format: json
@@ -78,7 +123,7 @@ jobs:
 
       - name: Render vulnerability summary
         env:
-          IMAGE: ${{ needs.build-image.outputs.image }}
+          IMAGE: ${{ matrix.target.image }}
           COMMIT: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -93,7 +138,7 @@ jobs:
       - name: Upload vulnerability reports
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-image-scan
+          name: trivy-image-scan-${{ matrix.target.name }}
           path: |
             trivy-results.json
             trivy-results.sarif
@@ -107,7 +152,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@bce182f857edf1feab116e9795a3393d21977282 # v4
         with:
           sarif_file: trivy-results.sarif
-          category: trivy-container-image
+          category: trivy-container-image-${{ matrix.target.name }}
 
   comment-image-scan:
     runs-on: ubuntu-latest
@@ -121,10 +166,16 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - name: Download vulnerability summary
+      - name: Download vulnerability summaries
         uses: actions/download-artifact@v4
         with:
-          name: trivy-image-scan
+          pattern: trivy-image-scan-*
+          path: reports
+
+      - name: Combine summaries
+        run: |
+          set -euo pipefail
+          cat reports/trivy-image-scan-mfr/trivy-report.md reports/trivy-image-scan-unoserver/trivy-report.md > trivy-report.md
 
       - name: Create or update PR comment
         env:
@@ -163,20 +214,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Docker image artifact
+      - name: Download Docker image artifact (build stage)
         uses: actions/download-artifact@v4
         with:
-          name: rdm-mfr-image
+          name: rdm-mfr-build-image
           path: /tmp
 
       - name: Load Docker image
         run: |
-          docker load -i /tmp/rdm-mfr-image.tar
+          docker load -i /tmp/rdm-mfr-build-image.tar
 
       - name: Run matrix job
         env:
           TEST_BUILD: ${{ matrix.test_build }}
-          MFR_TEST_IMAGE: ${{ needs.build-image.outputs.image }}
+          MFR_TEST_IMAGE: ${{ needs.build-image.outputs.build_image }}
         run: |
           bash .github/scripts/ci/run-tests.sh "$TEST_BUILD"
-
