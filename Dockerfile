@@ -56,6 +56,8 @@ RUN apt-get update \
 
 COPY --from=build /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=build /usr/local/bin /usr/local/bin
+# nbconvert templates used by the ipynb renderer live outside site-packages
+COPY --from=build /usr/local/share/jupyter /usr/local/share/jupyter
 COPY --from=build /code /code
 
 # pip is not needed at runtime and ships its own copies of urllib3, msgpack and
