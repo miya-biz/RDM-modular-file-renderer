@@ -41,6 +41,8 @@ FROM python:3.13-slim
 RUN usermod -d /home www-data && chown www-data:www-data /home
 
 RUN apt-get update \
+    # pick up Debian security updates published after the base image was built
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         # convert .step to jsc3d-compatible format
         freecad \

@@ -6,6 +6,8 @@ FROM debian:trixie-slim
 ENV UNOSERVER_HOME=/opt/unoserver
 
 RUN apt-get update \
+    # pick up Debian security updates published after the base image was built
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         # headless LibreOffice modules used by the unoconv exporter formats
         libreoffice-writer-nogui \
