@@ -220,13 +220,21 @@ jobs:
           name: rdm-mfr-build-image
           path: /tmp
 
-      - name: Load Docker image
+      - name: Download Docker image artifact (unoserver)
+        uses: actions/download-artifact@v4
+        with:
+          name: rdm-unoserver-image
+          path: /tmp
+
+      - name: Load Docker images
         run: |
           docker load -i /tmp/rdm-mfr-build-image.tar
+          docker load -i /tmp/rdm-unoserver-image.tar
 
       - name: Run matrix job
         env:
           TEST_BUILD: ${{ matrix.test_build }}
           MFR_TEST_IMAGE: ${{ needs.build-image.outputs.build_image }}
+          MFR_UNOSERVER_IMAGE: ${{ needs.build-image.outputs.unoserver_image }}
         run: |
           bash .github/scripts/ci/run-tests.sh "$TEST_BUILD"
