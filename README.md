@@ -10,7 +10,7 @@ A Python package for rendering files to HTML via an embeddable iframe.
 
 ### Compatibility
 
-MFR is compatible with Python 3.5 (tested up to 3.5.3) and 3.6.
+MFR is compatible with Python 3.13.
 
 ### Documentation
 
@@ -18,35 +18,32 @@ Documentation available at: http://modular-file-renderer.readthedocs.io/en/lates
 
 ### Setting up
 
-Install the latest version of python3.5.
+Install the latest version of python3.13.
 
 For MacOSX users:
 
 ```bash
-brew install python3
+brew install python@3.13
 # optional, needed for some converters
-brew install pspp unoconv
+brew install pspp libreoffice
 ```
 For Ubuntu users:
 
 ```bash
-apt-get install python3
+apt-get install python3.13
 # optional, needed for some converters
-apt-get install pspp unoconv
+apt-get install pspp libreoffice
 ```
 
-After installing python3.5, create the virtual environment with the following commands:
+After installing python3.13, set up the project with the following commands:
 
 ```bash
-pip install virtualenv
-pip install virtualenvwrapper
-mkvirtualenv --python=`which python3.5` mfr
+pip install poetry
+poetry env use python3.13
+poetry install
 
-pip install setuptools==37.0.0
-pip install invoke==0.13.0
-
-invoke install
-invoke server
+poetry run invoke install
+poetry run invoke server
 ```
 
 ### Configuring
@@ -82,8 +79,8 @@ If you encounter the error message `TypeError: throw() takes 2 positional argume
 Before running the tests, you will need to install some additional requirements. In your checkout, run:
 
 ```bash
-invoke install --develop
-invoke test
+poetry run invoke install --develop
+poetry run invoke test
 ```
 
 ### Known issues
