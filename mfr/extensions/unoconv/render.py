@@ -78,5 +78,6 @@ class UnoconvRenderer(extension.BaseRenderer):
     def cache_result(self):
         return self.renderer.cache_result
 
+    @property
     def use_celery(self) -> bool:
-        return True
+        return settings.USE_CELERY
