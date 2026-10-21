@@ -29,7 +29,10 @@ RUN apt-get update \
         fonts-noto-cjk \
     && apt-get clean \
     && apt-get autoremove -y \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    # the Ubuntu base image ships the pebble service manager (a Go binary outside dpkg);
+    # nothing here uses it, so drop it rather than carry its Go runtime findings
+    && rm -f /usr/bin/pebble
 
 # unoserver has to run under the system python that ships the uno module, so
 # the virtualenv is created with access to the system site-packages
