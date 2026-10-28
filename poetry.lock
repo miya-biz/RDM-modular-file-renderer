@@ -4851,7 +4851,7 @@ yarl = "1.25.1"
 type = "git"
 url = "https://github.com/RCOSDP/RDM-waterbutler.git"
 reference = "refs/pull/101/head"
-resolved_reference = "4cb66fb96913ecb82297adcde57ddf060b2446eb"
+resolved_reference = "d15fc8243312e34d374676b7ec5b8bdaca10b2ef"
 
 [[package]]
 name = "wcwidth"
