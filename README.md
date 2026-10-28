@@ -1,8 +1,10 @@
 # MFR (Modular File Renderer)
 
-`master` Build Status: ![Build Status](https://github.com/CenterForOpenScience/modular-file-renderer/actions/workflows/test-build.yml/badge.svg?branch=master)[![Coverage Status](https://coveralls.io/repos/github/CenterForOpenScience/modular-file-renderer/badge.svg?branch=master)](https://coveralls.io/github/CenterForOpenScience/modular-file-renderer?branch=master)
+`master` Build Status: [![Build Status](https://travis-ci.org/RCOSDP/RDM-modular-file-renderer.svg?branch=master)](https://travis-ci.org/RCOSDP/RDM-modular-file-renderer)
 
-`develop` Build Status: ![Build Status](https://github.com/CenterForOpenScience/modular-file-renderer/actions/workflows/test-build.yml/badge.svg?branch=develop)[![Coverage Status](https://coveralls.io/repos/github/CenterForOpenScience/modular-file-renderer/badge.svg?branch=develop)](https://coveralls.io/github/CenterForOpenScience/modular-file-renderer?branch=develop)
+`develop` Build Status: [![Build Status](https://travis-ci.org/RCOSDP/RDM-modular-file-renderer.svg?branch=develop)](https://travis-ci.org/RCOSDP/RDM-modular-file-renderer)
+
+[![Coverage Status](https://coveralls.io/repos/github/RCOSDP/RDM-modular-file-renderer/badge.svg)](https://coveralls.io/github/RCOSDP/RDM-modular-file-renderer)
 
 A Python package for rendering files to HTML via an embeddable iframe.
 
@@ -95,7 +97,7 @@ Interested in adding support for a new provider or file format? Check out the CO
 
 ### License
 
-Copyright 2013-2025 Center for Open Science
+Copyright 2013-2018 Center for Open Science
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -111,4 +113,4 @@ limitations under the License.
 
 ### COS is hiring!
 
-Want to help save science? Want to get paid to develop free, open source software? [Check out our openings!](https://www.cos.io/careers)
+Want to help save science? Want to get paid to develop free, open source software? [Check out our openings!](https://cos.io/our-communities/jobs/)
